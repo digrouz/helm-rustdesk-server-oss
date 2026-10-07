@@ -1,0 +1,161 @@
+{{- if gt (int .Values.replicaCount) 1 }}
+{{- fail (printf "rustdesk-server is a single-instance application: replicaCount must be 1 (got %v)" .Values.replicaCount) }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rustdesk-server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rustdesk-server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "rustdesk-server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rustdesk-server.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: hbbs
+          image: {{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.image.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command:
+            - hbbs
+          {{- if .Values.relay.server }}
+          args:
+            - "-r"
+            - {{ .Values.relay.server | quote }}
+          {{- end }}
+          ports:
+            - name: hbbs5
+              containerPort: 21115
+              protocol: TCP
+            - name: hbbs6
+              containerPort: 21116
+              protocol: TCP
+            - name: hbbs6udp
+              containerPort: 21116
+              protocol: UDP
+            - name: hbbs8
+              containerPort: 21118
+              protocol: TCP
+          {{- if .Values.securityContext }}
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            {{- if .Values.securityContext.seccompProfile }}
+            seccompProfile:
+              type: {{ .Values.securityContext.seccompProfile }}
+            {{- end }}
+          {{- end }}
+          startupProbe:
+            tcpSocket:
+              port: 21115
+            failureThreshold: 30
+            periodSeconds: 2
+            timeoutSeconds: 1
+          livenessProbe:
+            tcpSocket:
+              port: 21115
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 21115
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          volumeMounts:
+            - mountPath: /root
+              name: rustdesk-data
+            {{- if .Values.persistence.extraVolumeMounts }}
+            {{- toYaml .Values.persistence.extraVolumeMounts | nindent 12 }}
+            {{- end }}
+        - name: hbbr
+          image: {{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.image.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command:
+            - hbbr
+          ports:
+            - name: hbbr7
+              containerPort: 21117
+              protocol: TCP
+            - name: hbbr9
+              containerPort: 21119
+              protocol: TCP
+          {{- if .Values.securityContext }}
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            {{- if .Values.securityContext.seccompProfile }}
+            seccompProfile:
+              type: {{ .Values.securityContext.seccompProfile }}
+            {{- end }}
+          {{- end }}
+          startupProbe:
+            tcpSocket:
+              port: 21117
+            failureThreshold: 30
+            periodSeconds: 2
+            timeoutSeconds: 1
+          livenessProbe:
+            tcpSocket:
+              port: 21117
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 21117
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          volumeMounts:
+            - mountPath: /root
+              name: rustdesk-data
+            {{- if .Values.persistence.extraVolumeMounts }}
+            {{- toYaml .Values.persistence.extraVolumeMounts | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: rustdesk-data
+          {{- if eq .Values.persistence.data.type "pvc" }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.data.pvc.existingClaim | default (printf "%s-data-pvc" (include "rustdesk-server.fullname" .)) | quote }}
+          {{- else if eq .Values.persistence.data.type "nfs" }}
+          nfs:
+            server: {{ .Values.persistence.data.nfs.server | quote }}
+            path: {{ .Values.persistence.data.nfs.path | quote }}
+          {{- else if eq .Values.persistence.data.type "emptyDir" }}
+          emptyDir: { }
+          {{- else if eq .Values.persistence.data.type "hostPath" }}
+          hostPath:
+            path: {{ .Values.persistence.data.hostPath.path | quote }}
+          {{- else }}
+          {{- fail (printf "persistence.data.type must be one of [pvc, nfs, emptyDir, hostPath], got %q" .Values.persistence.data.type) }}
+          {{- end }}
+        {{- if .Values.persistence.extraVolumes }}
+        {{- toYaml .Values.persistence.extraVolumes | nindent 8 }}
+        {{- end }}

@@ -1,0 +1,16 @@
+apiVersion: v2
+name: rustdesk-server
+description: A Helm chart for RustDesk Server (OSS)
+type: application
+home: https://rustdesk.com
+keywords:
+  - rustdesk
+  - remote-desktop
+  - relay
+sources:
+  - https://github.com/digrouz/helm-rustdesk-server-oss
+maintainers:
+  - name: digrouz
+    email: nicolas.digregorio@gmail.com
+version: 0.1.0
+appVersion: "1.1.16"

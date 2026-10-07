@@ -1,0 +1,25 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named: {{ .Release.Name }}
+
+RustDesk ID/Rendezvous server (hbbs) ports:
+  - 21115/TCP   (ID main)
+  - 21116/TCP+UDP (ID websocket / WebRTC)
+  - 21118/TCP   (Web client)
+RustDesk relay server (hbbr) ports:
+  - 21117/TCP   (relay)
+  - 21119/TCP   (web relay)
+
+Data volume: /root (shared between hbbs and hbbr, holds the id_ed25519 key)
+Service: {{ include "rustdesk-server.fullname" . }}-svc
+
+{{- if .Values.relay.server }}
+
+Relay server address (hbbs -r flag): {{ .Values.relay.server }}
+{{- else }}
+
+NOTE: relay.server is not set. Clients will fall back to the ID server's
+address on port 21117 for relay traffic. Set relay.server to the externally
+reachable relay address (host:port) if the relay is exposed on a different
+host or domain.
+{{- end }}

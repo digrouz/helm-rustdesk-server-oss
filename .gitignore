@@ -1,0 +1,43 @@
+#################
+## Helm
+#################
+
+# Packaged chart artifacts
+*.tgz
+*.chart
+
+# Vendored / downloaded chart dependencies
+charts/
+
+#################
+## Editor / IDE
+#################
+
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.settings/
+.project
+.classpath
+
+#################
+## Mac crap
+#################
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+#################
+## Windows detritus
+#################
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

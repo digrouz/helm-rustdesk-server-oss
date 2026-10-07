@@ -1,0 +1,18 @@
+{{- if and (eq .Values.persistence.data.type "pvc") (not .Values.persistence.data.pvc.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "rustdesk-server.fullname" . }}-data-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rustdesk-server.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.data.pvc.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.data.pvc.size | quote }}
+  {{- if .Values.persistence.data.pvc.storageClass }}
+  storageClassName: {{ .Values.persistence.data.pvc.storageClass | quote }}
+  {{- end }}
+{{- end }}

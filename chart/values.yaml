@@ -1,0 +1,225 @@
+## @section Kubernetes settings
+##
+nameOverride: ""
+fullnameOverride: ""
+image:
+  ## @param image.registry rustdesk-server image registry
+  ##
+  registry: docker.io
+  ## @param image.repository rustdesk-server image repository
+  ##
+  repository: rustdesk/rustdesk-server
+  ##
+  ## @param image.tag rustdesk-server image tag
+  ## Ref: https://hub.docker.com/r/rustdesk/rustdesk-server/tags
+  ## Note: the `latest` tag tracks the most recent release. For a reproducible
+  ## deploy, pin a versioned tag (e.g. 1.1.16).
+  ##
+  tag: "latest"
+  ## @param image.pullPolicy rustdesk-server image pull policy
+  ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  pullPolicy: Always
+  ## @param image.resources Requests and limits for the rustdesk-server containers
+  ##
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+## @section Deployment Configuration
+##
+## @param replicaCount Number of rustdesk-server replicas.
+## Must be 1: the ID/Rendezvous server (hbbs) and the relay server (hbbr) run
+## together in a single pod and share the same data directory (the id_ed25519 key).
+replicaCount: 1
+podAnnotations: {}
+podLabels: {}
+## @section Security Configuration
+##
+## @param securityContext.allowPrivilegeEscalation Set no_new_privs on the rustdesk-server containers
+## @param securityContext.seccompProfile Seccomp profile for the rustdesk-server containers (RuntimeDefault, Localhost or Unconfined)
+##
+## Note: runAsUser / runAsNonRoot are intentionally not set. The rustdesk
+## binaries default to running as root and write the id_ed25519 key into the
+## data volume.
+securityContext:
+  allowPrivilegeEscalation: false
+  seccompProfile: RuntimeDefault
+## @section RustDesk Configuration
+##
+relay:
+  ## @param relay.server Externally reachable address (host:port) of the relay server (hbbr).
+  ## This value is passed to hbbs via the `-r` (relay-servers) flag so that clients
+  ## know where to connect for relay traffic. It must be reachable from your
+  ## clients, so it is usually the public domain/IP of the ingress/service that
+  ## exposes port 21117.
+  ## Leave empty to let clients fall back to the ID server's address on port 21117.
+  ##
+  server: ""
+## @section Service Configuration
+##
+service:
+  ## @param service.type Kubernetes Service type (ClusterIP, NodePort or LoadBalancer)
+  ##
+  type: ClusterIP
+## @section Ingress Configuration
+##
+ingress:
+  ## @param ingress.ingressClassName Ingress class name for the rustdesk-server ingress
+  ##
+  ingressClassName: traefik
+  ##
+  ## RustDesk speaks a binary protocol, so it is exposed with Traefik
+  ## IngressRouteTCP / IngressRouteUDP (not the HTTP Ingress resource). Each
+  ## route below requires a matching entryPoint to be configured on the Traefik
+  ## daemon (e.g. an entrypoint listening on the corresponding host port).
+  ##
+  ## @param ingress.hbbs5tcp.enabled Enable ingress for the ID main port (21115) TCP
+  ##
+  hbbs5tcp:
+    enabled: false
+    ## @param ingress.hbbs5tcp.traefik.entrypoint Traefik entrypoint for 21115/TCP
+    ##
+    traefik:
+      entrypoint: rustdesk5tcp
+    ## @param ingress.hbbs5tcp.weight Weight for 21115/TCP ingress
+    ##
+    weight: 10
+    ## @param ingress.hbbs5tcp.terminationDelay Seconds Traefik waits to terminate existing connections on reload
+    ##
+    terminationDelay: 400
+  ## @param ingress.hbbs6tcp.enabled Enable ingress for the ID websocket/WebRTC port (21116) TCP
+  ##
+  hbbs6tcp:
+    enabled: false
+    ## @param ingress.hbbs6tcp.traefik.entrypoint Traefik entrypoint for 21116/TCP
+    ##
+    traefik:
+      entrypoint: rustdesk6tcp
+    ## @param ingress.hbbs6tcp.weight Weight for 21116/TCP ingress
+    ##
+    weight: 10
+    ## @param ingress.hbbs6tcp.terminationDelay Seconds Traefik waits to terminate existing connections on reload
+    ##
+    terminationDelay: 400
+  ## @param ingress.hbbs6udp.enabled Enable ingress for the ID websocket/WebRTC port (21116) UDP
+  ##
+  hbbs6udp:
+    enabled: false
+    ## @param ingress.hbbs6udp.traefik.entrypoint Traefik entrypoint for 21116/UDP
+    ##
+    traefik:
+      entrypoint: rustdesk6udp
+    ## @param ingress.hbbs6udp.weight Weight for 21116/UDP ingress
+    ##
+    weight: 10
+  ## @param ingress.hbbs8tcp.enabled Enable ingress for the Web client port (21118) TCP
+  ##
+  hbbs8tcp:
+    enabled: false
+    ## @param ingress.hbbs8tcp.traefik.entrypoint Traefik entrypoint for 21118/TCP
+    ##
+    traefik:
+      entrypoint: rustdesk8tcp
+    ## @param ingress.hbbs8tcp.weight Weight for 21118/TCP ingress
+    ##
+    weight: 10
+    ## @param ingress.hbbs8tcp.terminationDelay Seconds Traefik waits to terminate existing connections on reload
+    ##
+    terminationDelay: 400
+  ## @param ingress.hbbr7tcp.enabled Enable ingress for the relay port (21117) TCP
+  ##
+  hbbr7tcp:
+    enabled: false
+    ## @param ingress.hbbr7tcp.traefik.entrypoint Traefik entrypoint for 21117/TCP
+    ##
+    traefik:
+      entrypoint: rustdesk7tcp
+    ## @param ingress.hbbr7tcp.weight Weight for 21117/TCP ingress
+    ##
+    weight: 10
+    ## @param ingress.hbbr7tcp.terminationDelay Seconds Traefik waits to terminate existing connections on reload
+    ##
+    terminationDelay: 400
+  ## @param ingress.hbbr9tcp.enabled Enable ingress for the web relay port (21119) TCP
+  ##
+  hbbr9tcp:
+    enabled: false
+    ## @param ingress.hbbr9tcp.traefik.entrypoint Traefik entrypoint for 21119/TCP
+    ##
+    traefik:
+      entrypoint: rustdesk9tcp
+    ## @param ingress.hbbr9tcp.weight Weight for 21119/TCP ingress
+    ##
+    weight: 10
+    ## @param ingress.hbbr9tcp.terminationDelay Seconds Traefik waits to terminate existing connections on reload
+    ##
+    terminationDelay: 400
+## @section Storage persistence Configuration
+##
+persistence:
+  data:
+    ## @param persistence.data.type Type of persistence for the rustdesk-server data
+    ## If set to pvc, a persistent volume claim will be created (unless an existingClaim is provided)
+    ## If set to nfs, a network file system will be used
+    ## If set to emptyDir, a temporary volume will be used (data is lost on pod restart)
+    ## If set to hostPath, a path on the host node will be mounted
+    ##
+    ## Note: this single data directory is shared between hbbs and hbbr and holds
+    ## the id_ed25519 key pair, so it must be persistent for the ID key to be stable.
+    ##
+    type: pvc
+    ## Specific persistence options for rustdesk-server data using a persistent volume claim
+    ##
+    pvc:
+      ## @param persistence.data.pvc.storageClass Storage class for rustdesk-server data
+      ## If not set, the default storage class will be used
+      ##
+      storageClass: longhorn
+      ## @param persistence.data.pvc.existingClaim Existing persistent volume claim for rustdesk-server data
+      ## If set, the data will be stored in the existing persistent volume claim
+      ## and no new PVC will be created
+      ##
+      existingClaim: ""
+      ## @param persistence.data.pvc.accessMode Access mode for rustdesk-server data
+      ##
+      accessMode: ReadWriteOnce
+      ## @param persistence.data.pvc.size Size of the persistent volume for rustdesk-server data
+      ## If not set, the default size will be used
+      ##
+      size: 1Gi
+    ## Specific persistence options for rustdesk-server data using NFS
+    ##
+    nfs:
+      ## @param persistence.data.nfs.server NFS server for rustdesk-server data
+      ## If not set, the default NFS server will be used
+      ##
+      server: ""
+      ## @param persistence.data.nfs.path NFS path for rustdesk-server data
+      ## If not set, the default NFS path will be used
+      ##
+      path: ""
+    ## Specific persistence options for rustdesk-server data using a host path
+    ##
+    hostPath:
+      ## @param persistence.data.hostPath.path Path on the host node for rustdesk-server data
+      ##
+      path: ""
+  ## Extra volumes to be mounted into the Pod
+  ## Example:
+  ## extraVolumes:
+  ##   - name: my-config
+  ##     configMap:
+  ##       name: my-configmap
+  extraVolumes: []
+  ## Extra volumeMounts to add to the hbbs and hbbr containers
+  ## Example:
+  ## extraVolumeMounts:
+  ##   - name: my-config
+  ##     mountPath: /etc/my-config
+  extraVolumeMounts: []
+extraObjects: []
+

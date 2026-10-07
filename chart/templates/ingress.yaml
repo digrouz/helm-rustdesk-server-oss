@@ -1,0 +1,124 @@
+{{- if .Values.ingress.hbbs5tcp.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "rustdesk-server.fullname" . }}-hbbs5tcp-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rustdesk-server.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  entryPoints:
+    - {{ .Values.ingress.hbbs5tcp.traefik.entrypoint }}
+  routes:
+  - match: HostSNI(`*`)
+    services:
+    - name: {{ include "rustdesk-server.fullname" . }}-svc
+      port: 21115
+      weight: {{ .Values.ingress.hbbs5tcp.weight }}
+      terminationDelay: {{ .Values.ingress.hbbs5tcp.terminationDelay }}
+{{- end }}
+{{- if .Values.ingress.hbbs6tcp.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "rustdesk-server.fullname" . }}-hbbs6tcp-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rustdesk-server.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  entryPoints:
+    - {{ .Values.ingress.hbbs6tcp.traefik.entrypoint }}
+  routes:
+  - match: HostSNI(`*`)
+    services:
+    - name: {{ include "rustdesk-server.fullname" . }}-svc
+      port: 21116
+      weight: {{ .Values.ingress.hbbs6tcp.weight }}
+      terminationDelay: {{ .Values.ingress.hbbs6tcp.terminationDelay }}
+{{- end }}
+{{- if .Values.ingress.hbbs6udp.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteUDP
+metadata:
+  name: {{ include "rustdesk-server.fullname" . }}-hbbs6udp-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rustdesk-server.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  entryPoints:
+    - {{ .Values.ingress.hbbs6udp.traefik.entrypoint }}
+  routes:
+  - services:
+    - name: {{ include "rustdesk-server.fullname" . }}-svc
+      port: 21116
+      weight: {{ .Values.ingress.hbbs6udp.weight }}
+{{- end }}
+{{- if .Values.ingress.hbbs8tcp.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "rustdesk-server.fullname" . }}-hbbs8tcp-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rustdesk-server.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  entryPoints:
+    - {{ .Values.ingress.hbbs8tcp.traefik.entrypoint }}
+  routes:
+  - match: HostSNI(`*`)
+    services:
+    - name: {{ include "rustdesk-server.fullname" . }}-svc
+      port: 21118
+      weight: {{ .Values.ingress.hbbs8tcp.weight }}
+      terminationDelay: {{ .Values.ingress.hbbs8tcp.terminationDelay }}
+{{- end }}
+{{- if .Values.ingress.hbbr7tcp.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "rustdesk-server.fullname" . }}-hbbr7tcp-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rustdesk-server.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  entryPoints:
+    - {{ .Values.ingress.hbbr7tcp.traefik.entrypoint }}
+  routes:
+  - match: HostSNI(`*`)
+    services:
+    - name: {{ include "rustdesk-server.fullname" . }}-svc
+      port: 21117
+      weight: {{ .Values.ingress.hbbr7tcp.weight }}
+      terminationDelay: {{ .Values.ingress.hbbr7tcp.terminationDelay }}
+{{- end }}
+{{- if .Values.ingress.hbbr9tcp.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "rustdesk-server.fullname" . }}-hbbr9tcp-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rustdesk-server.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  entryPoints:
+    - {{ .Values.ingress.hbbr9tcp.traefik.entrypoint }}
+  routes:
+  - match: HostSNI(`*`)
+    services:
+    - name: {{ include "rustdesk-server.fullname" . }}-svc
+      port: 21119
+      weight: {{ .Values.ingress.hbbr9tcp.weight }}
+      terminationDelay: {{ .Values.ingress.hbbr9tcp.terminationDelay }}
+{{- end }}
