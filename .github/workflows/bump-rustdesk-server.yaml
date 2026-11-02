@@ -1,0 +1,121 @@
+# Workflow to keep the rustdesk-server image tag up to date.
+# Compares the tag pinned in chart/values.yaml against the latest stable
+# release published on Docker Hub and, if a newer one exists, opens a PR
+# bumping chart/values.yaml (image.tag), chart/Chart.yaml (appVersion) and
+# incrementing the Helm chart version (chart/Chart.yaml, version) by one patch.
+name: Bump rustdesk-server image
+
+on:
+  # Check daily at 00:00 UTC
+  schedule:
+    - cron: "0 0 * * *"
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect latest stable rustdesk-server tag
+        id: check
+        env:
+          DOCKER_REPO: rustdesk/rustdesk-server
+        run: |
+          set -euo pipefail
+
+          # Tag currently pinned in the chart (robust to indentation/quoting)
+          CURRENT="$(awk '$1 == "tag:" { print $2; exit }' chart/values.yaml | tr -d '\"')"
+          echo "Current pinned tag: ${CURRENT:-<none>}"
+          echo "current=${CURRENT}" >> "$GITHUB_OUTPUT"
+
+          # Latest stable tag on Docker Hub (x.y.z only, no pre-releases)
+          LATEST="$(curl -fsSL "https://hub.docker.com/v2/repositories/${DOCKER_REPO}/tags?page_size=100" \
+            | jq -r '.results[].name' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V | tail -n1)"
+
+          if [[ -z "${LATEST}" ]]; then
+            echo "Could not determine a stable tag for ${DOCKER_REPO}; aborting." >&2
+            exit 1
+          fi
+
+          echo "Latest stable tag: ${LATEST}"
+          echo "latest=${LATEST}" >> "$GITHUB_OUTPUT"
+
+          if [[ "${LATEST}" != "${CURRENT}" ]]; then
+            echo "update_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+            echo "Already up to date (${CURRENT}). Nothing to do."
+          fi
+
+      - name: Bump versions and open PR
+        if: steps.check.outputs.update_available == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_TAG: ${{ steps.check.outputs.latest }}
+          RUSTDESK_REPO: rustdesk/rustdesk-server
+        run: |
+          set -euo pipefail
+
+          BRANCH="bump/rustdesk-server-${NEW_TAG}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+
+          # Bump image.tag in values.yaml (normalises to a quoted value)
+          sed -i -E "s/^([[:space:]]*tag:[[:space:]]*).*/\1\"${NEW_TAG}\"/" chart/values.yaml
+          # Bump appVersion in Chart.yaml
+          sed -i -E "s/^([[:space:]]*appVersion:[[:space:]]*).*/\1\"${NEW_TAG}\"/" chart/Chart.yaml
+
+          # The appVersion changed, so bump the Helm chart version (last/patch component)
+          OLD_CHART_VERSION="$(awk '$1 == "version:" { print $2; exit }' chart/Chart.yaml | tr -d '\"')"
+          if [[ -z "${OLD_CHART_VERSION}" ]]; then
+            echo "Could not read the chart version from Chart.yaml; aborting." >&2
+            exit 1
+          fi
+          NEW_CHART_VERSION="$(printf '%s' "${OLD_CHART_VERSION}" | awk -F. 'BEGIN{OFS="."} { $NF=$NF+1; print }')"
+          sed -i -E "s/^([[:space:]]*version:[[:space:]]*).*/\1${NEW_CHART_VERSION}/" chart/Chart.yaml
+
+          echo "Resulting values.yaml image.tag:"
+          grep -E '^[[:space:]]*tag:' chart/values.yaml
+          echo "Resulting Chart.yaml appVersion:"
+          grep -E '^[[:space:]]*appVersion:' chart/Chart.yaml
+          echo "Resulting Chart.yaml version (${OLD_CHART_VERSION} -> ${NEW_CHART_VERSION}):"
+          grep -E '^[[:space:]]*version:' chart/Chart.yaml
+
+          git add chart/values.yaml chart/Chart.yaml
+          git commit -m "Bump rustdesk-server to ${NEW_TAG}" \
+            -m "Automated update of image.tag (values.yaml) and appVersion (Chart.yaml) to the latest stable release; bumps the chart version ${OLD_CHART_VERSION} -> ${NEW_CHART_VERSION}."
+
+          git push origin "$BRANCH"
+
+          BODY="$(cat <<EOF
+          New stable release of \`${RUSTDESK_REPO}\` is available.
+
+          | File | Key | New value |
+          | --- | --- | --- |
+          | chart/values.yaml | image.tag | \`${NEW_TAG}\` |
+          | chart/Chart.yaml | appVersion | \`${NEW_TAG}\` |
+          | chart/Chart.yaml | version | \`${NEW_CHART_VERSION}\` (was \`${OLD_CHART_VERSION}\`) |
+
+          This PR was created automatically by the "Bump rustdesk-server image" workflow.
+          EOF
+          )"
+
+          gh pr create \
+            --title "Bump rustdesk-server to ${NEW_TAG}" \
+            --body "$BODY" \
+            --base main
