@@ -222,4 +222,3 @@ persistence:
   ##     mountPath: /etc/my-config
   extraVolumeMounts: []
 extraObjects: []
-
