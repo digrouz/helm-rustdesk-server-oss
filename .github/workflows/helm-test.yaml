@@ -53,5 +53,8 @@ jobs:
         if: steps.list-changed.outputs.changed == 'true'
 
       - name: Run chart-testing (install)
-        run: ct install --config ./.github/configs/ct.yaml
+        # The kind cluster has no "longhorn" StorageClass (the chart default),
+        # which would leave the PVC unbound and the pod unschedulable.
+        # Override the data volume with an ephemeral emptyDir for the test.
+        run: ct install --config ./.github/configs/ct.yaml --set persistence.data.type=emptyDir
         if: steps.list-changed.outputs.changed == 'true'
