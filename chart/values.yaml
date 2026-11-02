@@ -178,7 +178,7 @@ persistence:
       ## @param persistence.data.pvc.storageClass Storage class for rustdesk-server data
       ## If not set, the default storage class will be used
       ##
-      storageClass: longhorn
+      storageClass: ""
       ## @param persistence.data.pvc.existingClaim Existing persistent volume claim for rustdesk-server data
       ## If set, the data will be stored in the existing persistent volume claim
       ## and no new PVC will be created
