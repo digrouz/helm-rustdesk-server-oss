@@ -15,7 +15,7 @@ image:
   ## Note: the `latest` tag tracks the most recent release. For a reproducible
   ## deploy, pin a versioned tag (e.g. 1.1.16).
   ##
-  tag: "latest"
+  tag: "1.1.16"
   ## @param image.pullPolicy rustdesk-server image pull policy
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
   ##
